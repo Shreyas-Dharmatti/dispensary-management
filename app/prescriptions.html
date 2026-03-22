@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensary — Prescriptions</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .items-list { margin-top: 16px; }
+    .item-row {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .item-row:last-child { border-bottom: none; }
+    .item-row .med-name { font-weight: 500; }
+    .item-row .med-detail { color: var(--text2); font-size: 0.8rem; margin-top: 2px; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Dispensary <span>MS</span></div>
+  <div id="nav-links"></div>
+  <div id="nav-user"></div>
+</nav>
+
+<main class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Prescriptions</div>
+      <div class="page-sub">Medication prescriptions issued by doctors</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-input" type="text" id="search" placeholder="Search member or doctor…" oninput="filterTable()">
+    <select id="filter-status" onchange="filterTable()" style="max-width:150px">
+      <option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="Completed">Completed</option>
+      <option value="Cancelled">Cancelled</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <div id="presc-table"><div class="spinner">Loading…</div></div>
+  </div>
+</main>
+
+<!-- View Details Modal -->
+<div class="modal-overlay" id="view-modal">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-title">Prescription Details</div>
+    <div id="presc-details"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('view-modal')">Close</button>
+      <button class="btn btn-warn" id="btn-cancel-presc" onclick="cancelPrescription()" style="display:none">Cancel Prescription</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  if (!requireAuth()) throw '';
+  renderNav('prescriptions');
+
+  let allPrescs  = [];
+  let viewingID  = null;
+
+  function statusBadge(s) {
+    const map = { Active: 'green', Completed: 'blue', Cancelled: 'gray' };
+    return `<span class="badge badge-${map[s] || 'gray'}">${s}</span>`;
+  }
+
+  async function loadPrescriptions() {
+    try {
+      const data = await api.get('/prescriptions');
+      allPrescs = data.data || [];
+      renderTable(allPrescs);
+    } catch (err) {
+      document.getElementById('presc-table').innerHTML =
+        `<p class="empty">Error: ${err.message}</p>`;
+    }
+  }
+
+  function renderTable(rows) {
+    const cols = [
+      { key: 'PrescriptionID', label: 'ID' },
+      { key: 'MemberName',     label: 'Member' },
+      { key: 'DoctorName',     label: 'Doctor' },
+      { key: 'IssueDate',      label: 'Issued' },
+      { key: 'ValidUntil',     label: 'Valid Until' },
+      { key: 'Status',         label: 'Status' },
+    ];
+
+    buildTable('presc-table', cols, rows, row => {
+      setTimeout(() => {
+        document.querySelectorAll('#presc-table tbody tr').forEach((tr, i) => {
+          if (!rows[i]) return;
+          tr.cells[5].innerHTML = statusBadge(rows[i].Status);
+          if (rows[i].IssueDate)   tr.cells[3].textContent = rows[i].IssueDate.split('T')[0];
+          if (rows[i].ValidUntil)  tr.cells[4].textContent = rows[i].ValidUntil.split('T')[0];
+        });
+      }, 0);
+
+      return `<button class="btn btn-ghost btn-sm" onclick="viewPrescription(${row.PrescriptionID})">View</button>`;
+    });
+  }
+
+  function filterTable() {
+    const q      = document.getElementById('search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const filtered = allPrescs.filter(p => {
+      const matchQ = !q ||
+        p.MemberName?.toLowerCase().includes(q) ||
+        p.DoctorName?.toLowerCase().includes(q);
+      return matchQ && (!status || p.Status === status);
+    });
+    renderTable(filtered);
+  }
+
+  async function viewPrescription(id) {
+    viewingID = id;
+    document.getElementById('presc-details').innerHTML = '<div class="spinner">Loading…</div>';
+    openModal('view-modal');
+
+    try {
+      const data = await api.get(`/prescriptions/${id}`);
+      const p    = data.data;
+
+      const statusBadgeHtml = {
+        Active: '<span class="badge badge-green">Active</span>',
+        Completed: '<span class="badge badge-blue">Completed</span>',
+        Cancelled: '<span class="badge badge-gray">Cancelled</span>',
+      }[p.Status] || p.Status;
+
+      const itemsHtml = (p.items || []).length === 0
+        ? '<p style="color:var(--text3); font-size:0.85rem">No items on this prescription.</p>'
+        : p.items.map(item => `
+            <div class="item-row">
+              <div>
+                <div class="med-name">${item.MedicineName}</div>
+                <div class="med-detail">${item.Instructions || ''}</div>
+              </div>
+              <div><div class="med-detail">Dosage</div>${item.Dosage}</div>
+              <div><div class="med-detail">Frequency</div>${item.Frequency}</div>
+              <div><div class="med-detail">Qty / Duration</div>${item.Quantity} / ${item.Duration}</div>
+            </div>
+          `).join('');
+
+      document.getElementById('presc-details').innerHTML = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px">
+          <div class="form-group">
+            <label>Member</label><span style="font-weight:500">${p.MemberName}</span>
+          </div>
+          <div class="form-group">
+            <label>Doctor</label><span style="font-weight:500">${p.DoctorName}</span>
+          </div>
+          <div class="form-group">
+            <label>Issue Date</label><span>${p.IssueDate?.split('T')[0]}</span>
+          </div>
+          <div class="form-group">
+            <label>Valid Until</label><span>${p.ValidUntil?.split('T')[0]}</span>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Diagnosis</label><span>${p.Diagnosis}</span>
+          </div>
+          ${p.SpecialInstructions ? `
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Special Instructions</label><span>${p.SpecialInstructions}</span>
+          </div>` : ''}
+          <div class="form-group">
+            <label>Status</label>${statusBadgeHtml}
+          </div>
+        </div>
+        <div class="section-title" style="margin-top:0">Medicines</div>
+        <div class="items-list">${itemsHtml}</div>
+      `;
+
+      // Show cancel button only for admin/doctor on active prescriptions
+      const canCancel = (isAdmin() || hasRole('Doctor')) && p.Status === 'Active';
+      document.getElementById('btn-cancel-presc').style.display = canCancel ? 'inline-flex' : 'none';
+
+    } catch (err) {
+      document.getElementById('presc-details').innerHTML =
+        `<p class="empty">Error: ${err.message}</p>`;
+    }
+  }
+
+  async function cancelPrescription() {
+    if (!confirm('Cancel this prescription?')) return;
+    try {
+      await api.put(`/prescriptions/${viewingID}`, { Status: 'Cancelled' });
+      toast('Prescription cancelled');
+      closeModal('view-modal');
+      loadPrescriptions();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  loadPrescriptions();
+</script>
+</body>
+</html>

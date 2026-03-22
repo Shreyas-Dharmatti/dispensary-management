@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensary — Inventory</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Dispensary <span>MS</span></div>
+  <div id="nav-links"></div>
+  <div id="nav-user"></div>
+</nav>
+
+<main class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Inventory</div>
+      <div class="page-sub">Medicine stock, batches and expiry tracking</div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-warn" onclick="loadLowStock()" id="btn-lowstock">⚠ Low Stock</button>
+      <button class="btn btn-primary" id="btn-add" onclick="openAdd()" style="display:none">+ Add Batch</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-input" type="text" id="search" placeholder="Search medicine or batch…" oninput="filterTable()">
+    <select id="filter-status" onchange="filterTable()" style="max-width:150px">
+      <option value="">All Status</option>
+      <option value="Available">Available</option>
+      <option value="Reserved">Reserved</option>
+      <option value="Expired">Expired</option>
+      <option value="Damaged">Damaged</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="loadAll()">Show All</button>
+  </div>
+
+  <div class="table-wrap">
+    <div id="inv-table"><div class="spinner">Loading…</div></div>
+  </div>
+</main>
+
+<!-- Add Batch Modal -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">Add Inventory Batch</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Medicine *</label>
+        <select id="f-medicine"><option value="">Loading…</option></select>
+      </div>
+      <div class="form-group">
+        <label>Batch Number *</label>
+        <input type="text" id="f-batch">
+      </div>
+      <div class="form-group">
+        <label>Quantity *</label>
+        <input type="number" id="f-qty" min="0">
+      </div>
+      <div class="form-group">
+        <label>Manufacture Date *</label>
+        <input type="date" id="f-mfg">
+      </div>
+      <div class="form-group">
+        <label>Expiry Date *</label>
+        <input type="date" id="f-expiry">
+      </div>
+      <div class="form-group">
+        <label>Location *</label>
+        <input type="text" id="f-location" placeholder="e.g. Shelf A3">
+      </div>
+      <div class="form-group">
+        <label>Purchase Price</label>
+        <input type="number" id="f-price" min="0" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Reorder Level</label>
+        <input type="number" id="f-reorder" value="10" min="1">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addBatch()">Add Batch</button>
+    </div>
+  </div>
+</div>
+
+<!-- Update Quantity Modal -->
+<div class="modal-overlay" id="update-modal">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">Update Stock</div>
+    <p style="color:var(--text2); font-size:0.85rem; margin-bottom:14px" id="update-info"></p>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>New Quantity</label>
+      <input type="number" id="f-new-qty" min="0">
+    </div>
+    <div class="form-group">
+      <label>Status</label>
+      <select id="f-new-status">
+        <option value="Available">Available</option>
+        <option value="Reserved">Reserved</option>
+        <option value="Expired">Expired</option>
+        <option value="Damaged">Damaged</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('update-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateStock()">Update</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  if (!requireAuth()) throw '';
+  renderNav('inventory');
+
+  let allItems  = [];
+  let editingID = null;
+
+  if (hasRole('SuperAdmin','Admin','Pharmacist'))
+    document.getElementById('btn-add').style.display = 'flex';
+
+  function statusBadge(s) {
+    const map = { Available: 'green', Reserved: 'blue', Expired: 'danger', Damaged: 'warn' };
+    return `<span class="badge badge-${map[s] || 'gray'}">${s}</span>`;
+  }
+
+  function isLowStock(row) {
+    return row.Quantity <= row.ReorderLevel && row.Status === 'Available';
+  }
+
+  async function loadAll() {
+    document.getElementById('inv-table').innerHTML = '<div class="spinner">Loading…</div>';
+    try {
+      const data = await api.get('/inventory');
+      allItems = data.data || [];
+      renderTable(allItems);
+    } catch (err) {
+      document.getElementById('inv-table').innerHTML = `<p class="empty">Error: ${err.message}</p>`;
+    }
+  }
+
+  async function loadLowStock() {
+    document.getElementById('inv-table').innerHTML = '<div class="spinner">Loading…</div>';
+    try {
+      const data = await api.get('/inventory/low-stock');
+      allItems = data.data || [];
+      renderTable(allItems);
+      toast(`${allItems.length} low stock items`, allItems.length > 0 ? 'warn' : 'success');
+    } catch (err) {
+      document.getElementById('inv-table').innerHTML = `<p class="empty">Error: ${err.message}</p>`;
+    }
+  }
+
+  function renderTable(rows) {
+    const cols = [
+      { key: 'InventoryID',  label: 'ID' },
+      { key: 'MedicineName', label: 'Medicine' },
+      { key: 'BatchNumber',  label: 'Batch' },
+      { key: 'Quantity',     label: 'Qty' },
+      { key: 'ReorderLevel', label: 'Reorder At' },
+      { key: 'ExpiryDate',   label: 'Expires' },
+      { key: 'Location',     label: 'Location' },
+      { key: 'Status',       label: 'Status' },
+    ];
+
+    buildTable('inv-table', cols, rows, row => {
+      setTimeout(() => {
+        document.querySelectorAll('#inv-table tbody tr').forEach((tr, i) => {
+          if (!rows[i]) return;
+          tr.cells[7].innerHTML = statusBadge(rows[i].Status);
+          if (rows[i].ExpiryDate) tr.cells[5].textContent = rows[i].ExpiryDate.split('T')[0];
+          // Highlight low stock rows
+          if (isLowStock(rows[i])) {
+            tr.cells[3].style.color = 'var(--warn)';
+            tr.cells[3].style.fontWeight = '600';
+          }
+        });
+      }, 0);
+
+      let btns = '';
+      if (hasRole('SuperAdmin','Admin','Pharmacist')) {
+        btns += `<button class="btn btn-ghost btn-sm" onclick="openUpdate(${row.InventoryID}, ${row.Quantity}, '${row.MedicineName} — Batch ${row.BatchNumber}', '${row.Status}')">Update</button>`;
+      }
+      if (isAdmin()) {
+        btns += ` <button class="btn btn-danger btn-sm" onclick="deleteBatch(${row.InventoryID})">Delete</button>`;
+      }
+      return btns;
+    });
+  }
+
+  function filterTable() {
+    const q      = document.getElementById('search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const filtered = allItems.filter(i => {
+      const matchQ = !q ||
+        i.MedicineName?.toLowerCase().includes(q) ||
+        i.BatchNumber?.toLowerCase().includes(q);
+      return matchQ && (!status || i.Status === status);
+    });
+    renderTable(filtered);
+  }
+
+  async function openAdd() {
+    try {
+      const data = await api.get('/medicines');
+      document.getElementById('f-medicine').innerHTML =
+        '<option value="">Select medicine</option>' +
+        (data.data || []).map(m =>
+          `<option value="${m.MedicineID}">${m.Name} (${m.Form})</option>`
+        ).join('');
+    } catch {}
+
+    ['f-batch','f-qty','f-location','f-price'].forEach(id =>
+      document.getElementById(id).value = '');
+    document.getElementById('f-reorder').value = 10;
+    document.getElementById('f-mfg').value    = '';
+    document.getElementById('f-expiry').value = '';
+    openModal('add-modal');
+  }
+
+  async function addBatch() {
+    const body = {
+      MedicineID:    parseInt(document.getElementById('f-medicine').value),
+      BatchNumber:   document.getElementById('f-batch').value.trim(),
+      Quantity:      parseInt(document.getElementById('f-qty').value),
+      ManufactureDate: document.getElementById('f-mfg').value,
+      ExpiryDate:    document.getElementById('f-expiry').value,
+      Location:      document.getElementById('f-location').value.trim(),
+      PurchasePrice: parseFloat(document.getElementById('f-price').value) || null,
+      ReorderLevel:  parseInt(document.getElementById('f-reorder').value) || 10,
+    };
+
+    if (!body.MedicineID || !body.BatchNumber || body.Quantity === undefined ||
+        !body.ManufactureDate || !body.ExpiryDate || !body.Location)
+      return toast('Please fill all required fields', 'warn');
+
+    try {
+      await api.post('/inventory', body);
+      toast('Batch added');
+      closeModal('add-modal');
+      loadAll();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  function openUpdate(id, qty, label, status) {
+    editingID = id;
+    document.getElementById('update-info').textContent = label;
+    document.getElementById('f-new-qty').value    = qty;
+    document.getElementById('f-new-status').value = status;
+    openModal('update-modal');
+  }
+
+  async function updateStock() {
+    try {
+      await api.put(`/inventory/${editingID}`, {
+        Quantity: parseInt(document.getElementById('f-new-qty').value),
+        Status:   document.getElementById('f-new-status').value,
+      });
+      toast('Stock updated');
+      closeModal('update-modal');
+      loadAll();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  async function deleteBatch(id) {
+    if (!confirm('Delete this inventory batch?')) return;
+    try {
+      await api.del(`/inventory/${id}`);
+      toast('Batch deleted');
+      loadAll();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  loadAll();
+</script>
+</body>
+</html>

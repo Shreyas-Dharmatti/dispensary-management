@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensary — Portfolio</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .portfolio-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    .portfolio-layout.full-width {
+      grid-template-columns: 1fr;
+    }
+    /* Portfolio panel content max width for readability when full width */
+    .portfolio-layout.full-width #portfolio-panel {
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── Member list panel ──────────────────────────────────────── */
+    .member-list {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: calc(var(--nav-h) + 20px);
+    }
+    .member-list-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .member-list-header input { font-size: 0.85rem; }
+    .member-list-body { overflow-y: auto; flex: 1; }
+    .member-item {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .member-item:hover  { background: var(--bg3); }
+    .member-item.active { background: rgba(79,142,247,0.1); border-left: 3px solid var(--accent); }
+    .member-item .mi-av {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--bg3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.85rem; color: var(--accent); flex-shrink: 0;
+    }
+    .member-item .mi-name { font-size: 0.85rem; font-weight: 500; }
+    .member-item .mi-sub  { font-size: 0.75rem; color: var(--text2); margin-top: 1px; }
+
+    /* ── Hero header ────────────────────────────────────────────── */
+    .pf-hero {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .pf-hero-banner {
+      height: 72px;
+      background: linear-gradient(135deg, #1a2540 0%, #0f1827 50%, #162035 100%);
+      position: relative;
+    }
+    .pf-hero-banner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 20px,
+        rgba(79,142,247,0.03) 20px,
+        rgba(79,142,247,0.03) 40px
+      );
+    }
+    .pf-hero-body { padding: 0 24px 20px; }
+    .pf-avatar-wrap {
+      margin-top: -28px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+    .pf-avatar {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: var(--bg3);
+      border: 3px solid var(--bg2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 700; color: var(--accent);
+      position: relative; z-index: 1;
+    }
+    .pf-name { font-size: 1.25rem; font-weight: 600; line-height: 1.2; }
+    .pf-sub  { font-size: 0.82rem; color: var(--text2); margin-top: 3px;
+               display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+    /* ── Stats row ──────────────────────────────────────────────── */
+    .pf-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin: 16px 0 0;
+    }
+    .portfolio-layout.full-width .pf-stats {
+      grid-template-columns: repeat(3, minmax(0, 200px));
+      background: transparent;
+      gap: 12px;
+    }
+    .portfolio-layout.full-width .pf-stat {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .pf-stat {
+      background: var(--bg3);
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .pf-stat-val  { font-size: 1.5rem; font-weight: 700; font-family: var(--mono); }
+    .pf-stat-lbl  { font-size: 0.72rem; color: var(--text2); text-transform: uppercase;
+                    letter-spacing: 0.05em; margin-top: 2px; }
+    .pf-stat.blue  .pf-stat-val { color: var(--accent); }
+    .pf-stat.green .pf-stat-val { color: var(--accent2); }
+    .pf-stat.warn  .pf-stat-val { color: var(--warn); }
+
+    /* ── Info sections ──────────────────────────────────────────── */
+    .pf-section {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .pf-section-head {
+      padding: 13px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+    .pf-section-head:hover { background: var(--bg3); }
+    .pf-section-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; flex-shrink: 0;
+    }
+    .pf-section-title { font-size: 0.875rem; font-weight: 600; flex: 1; }
+    .pf-section-count {
+      font-size: 0.75rem; color: var(--text2);
+      background: var(--bg3); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 99px;
+    }
+    .pf-chevron {
+      font-size: 0.7rem; color: var(--text3);
+      transition: transform 0.2s;
+    }
+    .pf-section.collapsed .pf-chevron { transform: rotate(-90deg); }
+    .pf-section-body { padding: 16px 18px; }
+
+    /* Full width: appointments and prescriptions side by side */
+    .portfolio-layout.full-width .pf-sections-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .portfolio-layout.full-width .pf-sections-row .pf-section {
+      margin-bottom: 0;
+    }
+    .pf-section.collapsed .pf-section-body { display: none; }
+
+    /* ── Info grid ──────────────────────────────────────────────── */
+    .info-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .portfolio-layout.full-width .info-grid-2 { grid-template-columns: repeat(4, 1fr); }
+    .info-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    .portfolio-layout.full-width .info-grid-3 { grid-template-columns: repeat(4, 1fr); }
+    .info-field label {
+      font-size: 0.72rem; color: var(--text3);
+      display: block; margin-bottom: 3px;
+      text-transform: uppercase; letter-spacing: 0.04em; font-weight: 500;
+    }
+    .info-field span { font-size: 0.875rem; font-weight: 500; }
+
+    /* ── Vital bars ─────────────────────────────────────────────── */
+    .vital-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .portfolio-layout.full-width .vital-grid { grid-template-columns: repeat(4, 1fr); }
+    .vital-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px;
+    }
+    .vital-label { font-size: 0.72rem; color: var(--text2);
+                   text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .vital-value { font-size: 1.2rem; font-weight: 700; font-family: var(--mono); }
+    .vital-value.red    { color: var(--danger); }
+    .vital-value.green  { color: var(--accent2); }
+    .vital-value.blue   { color: var(--accent); }
+    .vital-value.normal { color: var(--text); }
+
+    /* ── Timeline ───────────────────────────────────────────────── */
+    .timeline { list-style: none; position: relative; padding-left: 20px; }
+    .timeline::before {
+      content: '';
+      position: absolute; left: 6px; top: 6px; bottom: 6px;
+      width: 1px; background: var(--border);
+    }
+    .tl-item { position: relative; padding: 0 0 16px 16px; }
+    .tl-item:last-child { padding-bottom: 0; }
+    .tl-dot {
+      position: absolute; left: -14px; top: 4px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--bg3); border: 2px solid var(--border);
+    }
+    .tl-dot.green  { background: var(--accent2); border-color: var(--accent2); }
+    .tl-dot.blue   { background: var(--accent);  border-color: var(--accent); }
+    .tl-dot.gray   { background: var(--text3);   border-color: var(--text3); }
+    .tl-date  { font-size: 0.75rem; color: var(--text3); margin-bottom: 3px; }
+    .tl-title { font-size: 0.875rem; font-weight: 600; }
+    .tl-sub   { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+
+    /* ── Rx card ────────────────────────────────────────────────── */
+    .rx-card {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; margin-bottom: 10px;
+      background: var(--bg3);
+    }
+    .rx-card:last-child { margin-bottom: 0; }
+    .rx-card-head { display: flex; justify-content: space-between; align-items: flex-start; }
+    .rx-doc   { font-size: 0.82rem; color: var(--text2); margin-top: 3px; }
+    .rx-diag  { font-size: 0.875rem; font-weight: 600; }
+    .rx-dates { font-size: 0.75rem; color: var(--text3); margin-top: 6px; }
+
+    /* ── Appt card ──────────────────────────────────────────────── */
+    .appt-card {
+      display: flex; align-items: center; gap: 14px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 14px; margin-bottom: 10px;
+      background: var(--bg3);
+    }
+    .appt-card:last-child { margin-bottom: 0; }
+    .appt-date-block {
+      text-align: center; flex-shrink: 0;
+      width: 48px;
+    }
+    .appt-day   { font-size: 1.3rem; font-weight: 700; font-family: var(--mono);
+                  color: var(--accent); line-height: 1; }
+    .appt-month { font-size: 0.7rem; color: var(--text2); text-transform: uppercase; margin-top: 2px; }
+    .appt-divider {
+      width: 1px; height: 36px; background: var(--border); flex-shrink: 0;
+    }
+    .appt-info { flex: 1; }
+    .appt-doctor { font-size: 0.875rem; font-weight: 600; }
+    .appt-time   { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+
+    /* ── Bill row ───────────────────────────────────────────────── */
+    .bill-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.875rem;
+    }
+    .bill-row:last-child { border-bottom: none; }
+    .bill-amount { font-weight: 700; font-family: var(--mono); color: var(--accent2); }
+
+    /* ── Empty state ────────────────────────────────────────────── */
+    .pf-empty {
+      text-align: center; padding: 24px 0;
+      color: var(--text3); font-size: 0.85rem;
+    }
+    .pf-empty-icon { font-size: 1.8rem; margin-bottom: 6px; opacity: 0.4; }
+
+    /* ── Placeholder ────────────────────────────────────────────── */
+    .pf-placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 320px; color: var(--text3); gap: 10px;
+    }
+    .pf-placeholder .ph-icon { font-size: 2.5rem; opacity: 0.2; }
+    .pf-placeholder p { font-size: 0.9rem; }
+
+    @media (max-width: 900px) {
+      .portfolio-layout { grid-template-columns: 1fr; }
+      .member-list { max-height: 240px; position: static; }
+      .info-grid-3 { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Dispensary <span>MS</span></div>
+  <div id="nav-links"></div>
+  <div id="nav-user"></div>
+</nav>
+
+<main class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Member Portfolio</div>
+      <div class="page-sub">Health profile, visits, prescriptions and appointments</div>
+    </div>
+  </div>
+
+  <div class="portfolio-layout">
+
+    <!-- Left: member list -->
+    <div class="member-list" id="member-list-panel">
+      <div class="member-list-header">
+        <input type="text" id="member-search" placeholder="Search members…" oninput="filterMembers()">
+      </div>
+      <div class="member-list-body" id="member-list-body">
+        <div class="pf-empty">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Right: portfolio -->
+    <div id="portfolio-panel">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)">
+        <div class="pf-placeholder">
+          <div class="ph-icon">👤</div>
+          <p>Select a member to view their portfolio</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+  if (!requireAuth()) throw '';
+  renderNav('portfolio');
+
+  const user = getUser();
+  let allMembers = [];
+  let activeID   = null;
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  async function init() {
+    if (isMember()) {
+      document.getElementById('member-list-panel').style.display = 'none';
+      document.querySelector('.portfolio-layout').classList.add('full-width');
+      loadPortfolio(user.entityID);
+    } else {
+      loadMemberList();
+    }
+  }
+
+  async function loadMemberList() {
+    try {
+      const data = await api.get('/portfolio');
+      allMembers = data.data || [];
+      renderMemberList(allMembers);
+    } catch (err) {
+      document.getElementById('member-list-body').innerHTML =
+        `<div class="pf-empty">Error: ${err.message}</div>`;
+    }
+  }
+
+  function renderMemberList(rows) {
+    if (!rows.length) {
+      document.getElementById('member-list-body').innerHTML =
+        '<div class="pf-empty">No members found</div>';
+      return;
+    }
+    const colors = ['#4f8ef7','#38c98b','#f0a830','#e05c5c','#a78bfa','#fb923c'];
+    document.getElementById('member-list-body').innerHTML = rows.map((m,i) => `
+      <div class="member-item ${m.MemberID === activeID ? 'active' : ''}"
+           onclick="loadPortfolio(${m.MemberID})">
+        <div class="mi-av" style="color:${colors[i % colors.length]}">${m.Name.charAt(0)}</div>
+        <div>
+          <div class="mi-name">${m.Name}</div>
+          <div class="mi-sub">${m.MemberType} · ${m.Department || '—'}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function filterMembers() {
+    const q = document.getElementById('member-search').value.toLowerCase();
+    renderMemberList(allMembers.filter(m =>
+      m.Name?.toLowerCase().includes(q) ||
+      m.Department?.toLowerCase().includes(q) ||
+      m.MemberType?.toLowerCase().includes(q)
+    ));
+  }
+
+  // ── Load Portfolio ────────────────────────────────────────────────────────
+  async function loadPortfolio(memberID) {
+    activeID = memberID;
+    document.querySelectorAll('.member-item').forEach(el => {
+      el.classList.toggle('active', el.onclick?.toString().includes(memberID));
+    });
+
+    document.getElementById('portfolio-panel').innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)">
+        <div class="pf-placeholder"><div class="ph-icon">⏳</div><p>Loading…</p></div>
+      </div>`;
+
+    try {
+      const data = await api.get(`/portfolio/${memberID}`);
+      renderPortfolio(data.data);
+    } catch (err) {
+      document.getElementById('portfolio-panel').innerHTML = `
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg)">
+          <div class="pf-placeholder" style="color:var(--danger)">
+            <div class="ph-icon">⚠</div><p>${err.message}</p>
+          </div>
+        </div>`;
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  function renderPortfolio(p) {
+    const m  = p.profile;
+    const mh = p.medicalHistory;
+
+    const typeColor = { Student:'#4f8ef7', Faculty:'#f0a830', Staff:'#888780' };
+    const color = typeColor[m.MemberType] || '#888780';
+
+    // ── BMI calculation ──
+    let bmiHtml = '';
+    if (mh?.Height && mh?.Weight) {
+      const bmi = (mh.Weight / ((mh.Height / 100) ** 2)).toFixed(1);
+      const bmiCat = bmi < 18.5 ? ['Underweight','warn'] :
+                     bmi < 25   ? ['Normal','green'] :
+                     bmi < 30   ? ['Overweight','warn'] : ['Obese','red'];
+      bmiHtml = `<div class="vital-card">
+        <div class="vital-label">BMI</div>
+        <div class="vital-value ${bmiCat[1]}">${bmi}</div>
+        <div style="font-size:0.72rem;color:var(--text2);margin-top:2px">${bmiCat[0]}</div>
+      </div>`;
+    }
+
+    document.getElementById('portfolio-panel').innerHTML = `
+
+      <!-- ── Hero ── -->
+      <div class="pf-hero">
+        <div class="pf-hero-banner">
+          <div style="position:absolute;top:14px;right:18px;z-index:1">
+            <span class="badge badge-${m.Status === 'Active' ? 'green' : 'gray'}">${m.Status}</span>
+          </div>
+        </div>
+        <div class="pf-hero-body">
+          <div class="pf-avatar-wrap">
+            <div class="pf-avatar" style="color:${color}">${m.Name.charAt(0)}</div>
+          </div>
+          <div class="pf-name">${m.Name}</div>
+          <div class="pf-sub">
+            <span class="badge badge-${m.MemberType === 'Student' ? 'blue' : m.MemberType === 'Faculty' ? 'warn' : 'gray'}">${m.MemberType}</span>
+            ${m.Department ? `<span style="color:var(--text2)">·</span> <span>${m.Department}</span>` : ''}
+            ${m.RollNumberOrEmployeeCode ? `<span style="color:var(--text2)">·</span> <span style="font-family:var(--mono);font-size:0.8rem">${m.RollNumberOrEmployeeCode}</span>` : ''}
+          </div>
+
+          <div class="pf-stats">
+            <div class="pf-stat blue">
+              <div class="pf-stat-val">${p.summary.totalVisits}</div>
+              <div class="pf-stat-lbl">Visits</div>
+            </div>
+            <div class="pf-stat green">
+              <div class="pf-stat-val">${p.summary.activePrescriptions}</div>
+              <div class="pf-stat-lbl">Active Rx</div>
+            </div>
+            <div class="pf-stat warn">
+              <div class="pf-stat-val">${p.summary.upcomingAppointments}</div>
+              <div class="pf-stat-lbl">Upcoming</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Personal Info ── -->
+      <div class="pf-section" id="sec-personal">
+        <div class="pf-section-head" onclick="toggleSection('sec-personal')">
+          <div class="pf-section-icon" style="background:rgba(79,142,247,0.1)">👤</div>
+          <div class="pf-section-title">Personal Information</div>
+          <span class="pf-chevron">▼</span>
+        </div>
+        <div class="pf-section-body">
+          <div class="info-grid-3">
+            <div class="info-field"><label>Age</label><span>${m.Age} years</span></div>
+            <div class="info-field"><label>Blood Group</label>
+              <span style="color:var(--danger);font-weight:700">${m.BloodGroup}</span>
+            </div>
+            <div class="info-field"><label>Registered</label>
+              <span>${m.RegistrationDate?.split('T')[0] || '—'}</span>
+            </div>
+            <div class="info-field"><label>Email</label><span style="word-break:break-all">${m.Email}</span></div>
+            <div class="info-field"><label>Contact</label><span>${m.ContactNumber}</span></div>
+            ${m.EmergencyContact ? `<div class="info-field"><label>Emergency</label><span>${m.EmergencyContact}</span></div>` : ''}
+            ${m.Address ? `<div class="info-field" style="grid-column:1/-1"><label>Address</label><span>${m.Address}</span></div>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Medical History ── -->
+      ${mh ? `
+      <div class="pf-section" id="sec-medical">
+        <div class="pf-section-head" onclick="toggleSection('sec-medical')">
+          <div class="pf-section-icon" style="background:rgba(224,92,92,0.1)">🩺</div>
+          <div class="pf-section-title">Medical History</div>
+          <span class="pf-chevron">▼</span>
+        </div>
+        <div class="pf-section-body">
+          <div class="vital-grid" style="margin-bottom:14px">
+            ${mh.BloodPressure ? `<div class="vital-card">
+              <div class="vital-label">Blood Pressure</div>
+              <div class="vital-value blue">${mh.BloodPressure}</div>
+              <div style="font-size:0.72rem;color:var(--text2);margin-top:2px">mmHg</div>
+            </div>` : ''}
+            ${mh.Height ? `<div class="vital-card">
+              <div class="vital-label">Height</div>
+              <div class="vital-value normal">${mh.Height}</div>
+              <div style="font-size:0.72rem;color:var(--text2);margin-top:2px">cm</div>
+            </div>` : ''}
+            ${mh.Weight ? `<div class="vital-card">
+              <div class="vital-label">Weight</div>
+              <div class="vital-value normal">${mh.Weight}</div>
+              <div style="font-size:0.72rem;color:var(--text2);margin-top:2px">kg</div>
+            </div>` : ''}
+            ${bmiHtml}
+          </div>
+          <div class="info-grid-2">
+            ${mh.KnownAllergies ? `<div class="info-field">
+              <label>Known Allergies</label>
+              <span style="color:${mh.KnownAllergies.toLowerCase().includes('no known') ? 'var(--accent2)' : 'var(--warn)'}">${mh.KnownAllergies}</span>
+            </div>` : ''}
+            ${mh.ChronicConditions ? `<div class="info-field">
+              <label>Chronic Conditions</label>
+              <span style="color:${mh.ChronicConditions === 'None' ? 'var(--text2)' : 'var(--warn)'}">${mh.ChronicConditions}</span>
+            </div>` : ''}
+            ${mh.PastSurgeries && mh.PastSurgeries !== 'None' ? `<div class="info-field">
+              <label>Past Surgeries</label><span>${mh.PastSurgeries}</span>
+            </div>` : ''}
+            ${mh.FamilyHistory ? `<div class="info-field">
+              <label>Family History</label><span>${mh.FamilyHistory}</span>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>` : ''}
+
+      <div class="pf-sections-row">
+      <!-- ── Upcoming Appointments ── -->
+      <div class="pf-section" id="sec-appts">
+        <div class="pf-section-head" onclick="toggleSection('sec-appts')">
+          <div class="pf-section-icon" style="background:rgba(240,168,48,0.1)">📅</div>
+          <div class="pf-section-title">Upcoming Appointments</div>
+          <span class="pf-section-count">${p.upcomingAppointments.length}</span>
+          <span class="pf-chevron">▼</span>
+        </div>
+        <div class="pf-section-body">
+          ${p.upcomingAppointments.length === 0
+            ? `<div class="pf-empty"><div class="pf-empty-icon">📅</div>No upcoming appointments</div>`
+            : p.upcomingAppointments.map(a => {
+                const d = new Date(a.AppointmentDate);
+                const day   = d.getDate();
+                const month = d.toLocaleString('en',{month:'short'});
+                return `<div class="appt-card">
+                  <div class="appt-date-block">
+                    <div class="appt-day">${day}</div>
+                    <div class="appt-month">${month}</div>
+                  </div>
+                  <div class="appt-divider"></div>
+                  <div class="appt-info">
+                    <div class="appt-doctor">${a.DoctorName}</div>
+                    <div class="appt-time">${a.AppointmentTime?.substring(0,5)} · ${a.Specialization || ''}</div>
+                  </div>
+                  <span class="badge badge-${a.Priority === 'Urgent' ? 'warn' : a.Priority === 'Emergency' ? 'danger' : 'gray'}">${a.Priority}</span>
+                </div>`;
+              }).join('')}
+        </div>
+      </div>
+
+      <!-- ── Active Prescriptions ── -->
+      <div class="pf-section" id="sec-rx">
+        <div class="pf-section-head" onclick="toggleSection('sec-rx')">
+          <div class="pf-section-icon" style="background:rgba(56,201,139,0.1)">💊</div>
+          <div class="pf-section-title">Active Prescriptions</div>
+          <span class="pf-section-count">${p.activePrescriptions.length}</span>
+          <span class="pf-chevron">▼</span>
+        </div>
+        <div class="pf-section-body">
+          ${p.activePrescriptions.length === 0
+            ? `<div class="pf-empty"><div class="pf-empty-icon">💊</div>No active prescriptions</div>`
+            : p.activePrescriptions.map(rx => `
+              <div class="rx-card">
+                <div class="rx-card-head">
+                  <div>
+                    <div class="rx-diag">${rx.Diagnosis}</div>
+                    <div class="rx-doc">Dr. ${rx.DoctorName}</div>
+                  </div>
+                  <span class="badge badge-green">Active</span>
+                </div>
+                <div class="rx-dates">
+                  Issued ${rx.IssueDate?.split('T')[0]}
+                  &nbsp;·&nbsp;
+                  Valid until <strong>${rx.ValidUntil?.split('T')[0]}</strong>
+                </div>
+              </div>`).join('')}
+        </div>
+      </div>
+
+      </div>
+
+      <!-- ── Recent Visits ── -->
+      <div class="pf-section" id="sec-visits">
+        <div class="pf-section-head" onclick="toggleSection('sec-visits')">
+          <div class="pf-section-icon" style="background:rgba(79,142,247,0.1)">🏥</div>
+          <div class="pf-section-title">Recent Visits</div>
+          <span class="pf-section-count">${p.recentVisits.length}</span>
+          <span class="pf-chevron">▼</span>
+        </div>
+        <div class="pf-section-body">
+          ${p.recentVisits.length === 0
+            ? `<div class="pf-empty"><div class="pf-empty-icon">🏥</div>No visit history</div>`
+            : `<ul class="timeline">
+                ${p.recentVisits.map(v => `
+                  <li class="tl-item">
+                    <div class="tl-dot ${v.Status === 'Completed' ? 'green' : 'gray'}"></div>
+                    <div class="tl-date">${v.VisitDate?.split('T')[0]} · ${v.VisitType}</div>
+                    <div class="tl-title">${v.Diagnosis || v.ChiefComplaint}</div>
+                    <div class="tl-sub">Dr. ${v.DoctorName}
+                      &nbsp;·&nbsp;
+                      <span class="badge badge-${v.Status === 'Completed' ? 'green' : 'gray'}" style="font-size:0.7rem">${v.Status}</span>
+                    </div>
+                  </li>`).join('')}
+              </ul>`}
+        </div>
+      </div>
+
+      <!-- ── Recent Bills ── -->
+      ${p.recentBills?.length > 0 ? `
+      <div class="pf-section" id="sec-bills">
+        <div class="pf-section-head" onclick="toggleSection('sec-bills')">
+          <div class="pf-section-icon" style="background:rgba(167,139,250,0.1)">💳</div>
+          <div class="pf-section-title">Recent Bills</div>
+          <span class="pf-section-count">${p.recentBills.length}</span>
+          <span class="pf-chevron">▼</span>
+        </div>
+        <div class="pf-section-body">
+          ${p.recentBills.map(b => `
+            <div class="bill-row">
+              <div>
+                <div style="font-size:0.875rem;font-weight:500">${b.BillDate?.split('T')[0]}</div>
+                <div style="font-size:0.75rem;color:var(--text2)">${b.PaymentMethod}</div>
+              </div>
+              <div style="text-align:right">
+                <div class="bill-amount">₹${b.TotalAmount}</div>
+                <span class="badge badge-${b.PaymentStatus === 'Paid' ? 'green' : 'warn'}" style="font-size:0.7rem">${b.PaymentStatus}</span>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>` : ''}
+    `;
+  }
+
+  function toggleSection(id) {
+    document.getElementById(id).classList.toggle('collapsed');
+  }
+
+  init();
+</script>
+</body>
+</html>

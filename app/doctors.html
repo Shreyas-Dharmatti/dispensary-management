@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensary — Doctors</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Dispensary <span>MS</span></div>
+  <div id="nav-links"></div>
+  <div id="nav-user"></div>
+</nav>
+
+<main class="page">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Doctors</div>
+      <div class="page-sub">Registered doctors and their availability</div>
+    </div>
+    <button class="btn btn-primary" id="btn-add" onclick="openAdd()" style="display:none">+ Add Doctor</button>
+  </div>
+
+  <div class="toolbar">
+    <input class="search-input" type="text" id="search" placeholder="Search by name or specialization…" oninput="filterTable()">
+    <select id="filter-status" onchange="filterTable()" style="max-width:150px">
+      <option value="">All Status</option>
+      <option value="Active">Active</option>
+      <option value="On Leave">On Leave</option>
+      <option value="Inactive">Inactive</option>
+    </select>
+  </div>
+
+  <div class="table-wrap">
+    <div id="doctors-table"><div class="spinner">Loading…</div></div>
+  </div>
+</main>
+
+<!-- Add/Edit Modal -->
+<div class="modal-overlay" id="doctor-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Add Doctor</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Full Name *</label>
+        <input type="text" id="f-name">
+      </div>
+      <div class="form-group">
+        <label>Specialization *</label>
+        <input type="text" id="f-spec">
+      </div>
+      <div class="form-group">
+        <label>Email *</label>
+        <input type="email" id="f-email">
+      </div>
+      <div class="form-group">
+        <label>Phone *</label>
+        <input type="text" id="f-phone">
+      </div>
+      <div class="form-group">
+        <label>License Number *</label>
+        <input type="text" id="f-license">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="Active">Active</option>
+          <option value="On Leave">On Leave</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Available From</label>
+        <input type="time" id="f-from">
+      </div>
+      <div class="form-group">
+        <label>Available To</label>
+        <input type="time" id="f-to">
+      </div>
+      <div class="form-group full">
+        <label>Working Days</label>
+        <input type="text" id="f-days" placeholder="e.g. Mon-Fri">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('doctor-modal')">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveDoctor()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Delete Doctor</div>
+    <p style="color:var(--text2); font-size:0.9rem">
+      Delete <strong id="del-name"></strong>? This cannot be undone.
+    </p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('delete-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  if (!requireAuth()) throw '';
+  renderNav('doctors');
+
+  let allDoctors = [];
+  let editingID  = null;
+  let deletingID = null;
+
+  if (isAdmin()) document.getElementById('btn-add').style.display = 'flex';
+
+  function statusBadge(s) {
+    const map = { Active: 'green', 'On Leave': 'warn', Inactive: 'gray' };
+    return `<span class="badge badge-${map[s] || 'gray'}">${s}</span>`;
+  }
+
+  async function loadDoctors() {
+    try {
+      const data = await api.get('/doctors');
+      allDoctors = data.data || [];
+      renderTable(allDoctors);
+    } catch (err) {
+      document.getElementById('doctors-table').innerHTML =
+        `<p class="empty">Error: ${err.message}</p>`;
+    }
+  }
+
+  function renderTable(rows) {
+    const cols = [
+      { key: 'DoctorID',       label: 'ID' },
+      { key: 'Name',           label: 'Name' },
+      { key: 'Specialization', label: 'Specialization' },
+      { key: 'Phone',          label: 'Phone' },
+      { key: 'WorkingDays',    label: 'Days' },
+      { key: 'AvailableFrom',  label: 'From' },
+      { key: 'AvailableTo',    label: 'To' },
+      { key: 'Status',         label: 'Status' },
+    ];
+
+    buildTable('doctors-table', cols, rows, row => {
+      setTimeout(() => {
+        document.querySelectorAll('#doctors-table tbody tr').forEach((tr, i) => {
+          tr.cells[7].innerHTML = statusBadge(rows[i].Status);
+          // Hide phone/email for non-clinical
+          if (!isClinical()) tr.cells[3].textContent = '—';
+        });
+      }, 0);
+
+      let btns = `<button class="btn btn-ghost btn-sm" onclick="openEdit(${row.DoctorID})">Edit</button>`;
+      if (isAdmin()) {
+        btns += ` <button class="btn btn-danger btn-sm" onclick="openDelete(${row.DoctorID},'${row.Name.replace(/'/g,"\\'")}')">Delete</button>`;
+      }
+      return btns;
+    });
+  }
+
+  function filterTable() {
+    const q      = document.getElementById('search').value.toLowerCase();
+    const status = document.getElementById('filter-status').value;
+    const filtered = allDoctors.filter(d => {
+      const matchQ = !q || d.Name?.toLowerCase().includes(q) || d.Specialization?.toLowerCase().includes(q);
+      const matchS = !status || d.Status === status;
+      return matchQ && matchS;
+    });
+    renderTable(filtered);
+  }
+
+  function openAdd() {
+    editingID = null;
+    document.getElementById('modal-title').textContent = 'Add Doctor';
+    document.getElementById('modal-save-btn').textContent = 'Add Doctor';
+    ['f-name','f-spec','f-email','f-phone','f-license','f-days'].forEach(id =>
+      document.getElementById(id).value = '');
+    document.getElementById('f-status').value = 'Active';
+    document.getElementById('f-from').value   = '09:00';
+    document.getElementById('f-to').value     = '17:00';
+    openModal('doctor-modal');
+  }
+
+  async function openEdit(id) {
+    editingID = id;
+    document.getElementById('modal-title').textContent = 'Edit Doctor';
+    document.getElementById('modal-save-btn').textContent = 'Save Changes';
+    try {
+      const data = await api.get(`/doctors/${id}`);
+      const d    = data.data;
+      document.getElementById('f-name').value    = d.Name || '';
+      document.getElementById('f-spec').value    = d.Specialization || '';
+      document.getElementById('f-email').value   = d.Email || '';
+      document.getElementById('f-phone').value   = d.Phone || '';
+      document.getElementById('f-license').value = d.LicenseNumber || '';
+      document.getElementById('f-status').value  = d.Status || 'Active';
+      document.getElementById('f-from').value    = d.AvailableFrom || '';
+      document.getElementById('f-to').value      = d.AvailableTo || '';
+      document.getElementById('f-days').value    = d.WorkingDays || '';
+
+      // Doctors editing own record cannot change license/status/email
+      const user = getUser();
+      const isSelf = user.entityType === 'Doctor' && user.entityID === id;
+      if (isSelf && !isAdmin()) {
+        ['f-license','f-status','f-email'].forEach(fid =>
+          document.getElementById(fid).disabled = true
+        );
+      }
+
+      openModal('doctor-modal');
+    } catch (err) {
+      toast('Failed to load doctor: ' + err.message, 'error');
+    }
+  }
+
+  async function saveDoctor() {
+    const body = {
+      Name:           document.getElementById('f-name').value.trim(),
+      Specialization: document.getElementById('f-spec').value.trim(),
+      Email:          document.getElementById('f-email').value.trim(),
+      Phone:          document.getElementById('f-phone').value.trim(),
+      LicenseNumber:  document.getElementById('f-license').value.trim(),
+      Status:         document.getElementById('f-status').value,
+      AvailableFrom:  document.getElementById('f-from').value,
+      AvailableTo:    document.getElementById('f-to').value,
+      WorkingDays:    document.getElementById('f-days').value.trim(),
+    };
+    if (!body.Name || !body.Specialization || !body.Email || !body.Phone || !body.LicenseNumber)
+      return toast('Please fill all required fields', 'warn');
+
+    try {
+      if (editingID) {
+        await api.put(`/doctors/${editingID}`, body);
+        toast('Doctor updated');
+      } else {
+        await api.post('/doctors', body);
+        toast('Doctor added');
+      }
+      closeModal('doctor-modal');
+      loadDoctors();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  function openDelete(id, name) {
+    deletingID = id;
+    document.getElementById('del-name').textContent = name;
+    openModal('delete-modal');
+  }
+
+  async function confirmDelete() {
+    try {
+      await api.del(`/doctors/${deletingID}`);
+      toast('Doctor deleted');
+      closeModal('delete-modal');
+      loadDoctors();
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+  }
+
+  loadDoctors();
+</script>
+
+<!-- Schedule Modal -->
+<div class="modal-overlay" id="schedule-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title">Weekly Schedule — <span id="sched-doctor-name"></span></div>
+    <p style="font-size:0.82rem;color:var(--text2);margin-bottom:16px">
+      Set working hours per day. Leave unchecked for days off.
+    </p>
+    <div id="sched-days"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('schedule-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSchedule()">Save Schedule</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

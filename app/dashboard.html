@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensary — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .welcome { margin-bottom: 28px; }
+    .welcome h1 { font-size: 1.5rem; font-weight: 600; }
+    .welcome p  { color: var(--text2); font-size: 0.9rem; margin-top: 4px; }
+    .quick-links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+    .quick-card {
+      flex: 1; min-width: 160px; background: var(--bg2);
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 16px 20px; cursor: pointer; transition: border-color 0.2s;
+      text-decoration: none; color: var(--text);
+    }
+    .quick-card:hover { border-color: var(--accent); }
+    .quick-card .icon { font-size: 1.4rem; margin-bottom: 8px; }
+    .quick-card .label { font-size: 0.875rem; font-weight: 500; }
+    .quick-card .sub   { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+    .low-stock-warn {
+      background: rgba(240,168,48,0.08); border: 1px solid rgba(240,168,48,0.3);
+      border-radius: var(--radius-lg); padding: 14px 20px;
+      display: flex; align-items: center; gap: 12px; margin-top: 20px;
+    }
+    .low-stock-warn span { color: var(--warn); font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">Dispensary <span>MS</span></div>
+  <div id="nav-links"></div>
+  <div id="nav-user"></div>
+</nav>
+
+<main class="page">
+  <div class="welcome">
+    <h1 id="welcome-msg">Welcome back</h1>
+    <p id="welcome-sub">Here's what's happening today.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="card-grid" id="stats-grid">
+    <div class="stat-card blue">
+      <div class="stat-label">Total Members</div>
+      <div class="stat-value" id="stat-members">—</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Active Doctors</div>
+      <div class="stat-value" id="stat-doctors">—</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="stat-label">Appointments Today</div>
+      <div class="stat-value" id="stat-appts">—</div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-label">Low Stock Items</div>
+      <div class="stat-value" id="stat-lowstock">—</div>
+    </div>
+  </div>
+
+  <!-- Low stock warning -->
+  <div class="low-stock-warn" id="low-stock-warn" style="display:none">
+    <span>⚠</span>
+    <span id="low-stock-msg"></span>
+    <a href="inventory.html" style="margin-left:auto; font-size:0.82rem">View Inventory →</a>
+  </div>
+
+  <!-- Quick links -->
+  <div class="section-title">Quick Access</div>
+  <div class="quick-links" id="quick-links"></div>
+</main>
+
+<script src="js/api.js"></script>
+<script>
+  if (!requireAuth()) throw '';
+  const user = getUser();
+
+  renderNav('dashboard');
+
+  // Show username immediately, then replace with real name once fetched
+  document.getElementById('welcome-msg').textContent = `Welcome back, ${user.username}`;
+  document.getElementById('welcome-sub').textContent =
+    `Logged in as ${user.roles.join(', ')} · ${new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}`;
+
+  // Fetch real name based on entity type and replace username
+  async function loadRealName() {
+    try {
+      let name = null;
+      if (user.entityType === 'Member') {
+        const data = await api.get(`/members/${user.entityID}`);
+        name = data?.data?.Name;
+      } else if (user.entityType === 'Doctor') {
+        const data = await api.get(`/doctors/${user.entityID}`);
+        name = data?.data?.Name;
+      } else if (user.entityType === 'Staff') {
+        const data = await api.get(`/staff/${user.entityID}`);
+        name = data?.data?.Name;
+      } else if (user.entityType === 'SuperAdmin') {
+        const data = await api.get(`/superadmin/${user.entityID}`);
+        name = data?.data?.Name;
+      }
+      if (name) document.getElementById('welcome-msg').textContent = `Welcome back, ${name}`;
+    } catch {}
+  }
+  loadRealName();
+
+  // Quick links based on role
+  const links = [
+    { href: 'members.html',       icon: '👤', label: 'Members',       sub: 'View & manage',   always: true },
+    { href: 'appointments.html',  icon: '📅', label: 'Appointments',  sub: 'Book & track',    always: true },
+    { href: 'doctors.html',       icon: '🩺', label: 'Doctors',       sub: 'Directory',       always: true },
+    { href: 'prescriptions.html', icon: '💊', label: 'Prescriptions', sub: 'View records',    clinical: true },
+    { href: 'inventory.html',     icon: '📦', label: 'Inventory',     sub: 'Stock & batches', clinical: true },
+    { href: 'portfolio.html',     icon: '📋', label: 'Portfolio',     sub: 'Member profiles', always: true },
+  ];
+
+  document.getElementById('quick-links').innerHTML = links
+    .filter(l => l.always || (l.clinical && isClinical()))
+    .map(l => `
+      <a class="quick-card" href="${l.href}">
+        <div class="icon">${l.icon}</div>
+        <div class="label">${l.label}</div>
+        <div class="sub">${l.sub}</div>
+      </a>
+    `).join('');
+
+  // Load stats
+  async function loadStats() {
+    try {
+      const [members, doctors, appts] = await Promise.all([
+        api.get('/members'),
+        api.get('/doctors'),
+        api.get('/appointments'),
+      ]);
+
+      document.getElementById('stat-members').textContent = members?.count ?? '—';
+      document.getElementById('stat-doctors').textContent =
+        doctors?.data?.filter(d => d.Status === 'Active').length ?? '—';
+
+      const today = new Date().toISOString().split('T')[0];
+      const todayAppts = appts?.data?.filter(a => a.AppointmentDate?.startsWith(today)) ?? [];
+      document.getElementById('stat-appts').textContent = todayAppts.length;
+
+      // Low stock — only for clinical users
+      if (isClinical()) {
+        const ls = await api.get('/inventory/low-stock');
+        const count = ls?.count ?? 0;
+        document.getElementById('stat-lowstock').textContent = count;
+        if (count > 0) {
+          document.getElementById('low-stock-warn').style.display = 'flex';
+          document.getElementById('low-stock-msg').textContent =
+            `${count} medicine batch${count > 1 ? 'es are' : ' is'} at or below reorder level.`;
+        }
+      } else {
+        document.getElementById('stats-grid').querySelector('.danger').style.display = 'none';
+      }
+    } catch (err) {
+      console.error('Stats load error:', err);
+    }
+  }
+
+  loadStats();
+</script>
+</body>
+</html>

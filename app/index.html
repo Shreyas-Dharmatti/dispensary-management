@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensary — Login</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-wrap { width: 100%; max-width: 380px; padding: 16px; }
+    .login-brand { text-align: center; margin-bottom: 32px; }
+    .login-brand h1 { font-size: 1.5rem; font-weight: 600; }
+    .login-brand h1 span { color: var(--accent); }
+    .login-brand p { color: var(--text2); font-size: 0.875rem; margin-top: 4px; }
+    .login-card { background: var(--bg2); border: 1px solid var(--border);
+                  border-radius: var(--radius-lg); padding: 28px; }
+    .login-card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .login-btn { width: 100%; margin-top: 6px; justify-content: center; }
+    .login-err { display: none; color: var(--danger); font-size: 0.82rem;
+                 background: rgba(224,92,92,0.1); border: 1px solid rgba(224,92,92,0.3);
+                 padding: 8px 12px; border-radius: var(--radius); margin-top: 10px; }
+    /* Set-password panel */
+    #set-pw-panel { display: none; margin-top: 16px; padding-top: 16px;
+                    border-top: 1px solid var(--border); }
+    #set-pw-panel h3 { font-size: 0.9rem; color: var(--warn); margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-brand">
+    <h1>Dispensary <span>MS</span></h1>
+    <p>College Dispensary Management System</p>
+  </div>
+
+  <div class="login-card">
+    <h2>Sign in to your account</h2>
+
+    <div class="form-group">
+      <label for="username">Username</label>
+      <input type="text" id="username" placeholder="e.g. CS2021001 or DOC001" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="password">Password</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="btn btn-primary login-btn" onclick="login()">Sign In</button>
+    <div class="login-err" id="login-err"></div>
+
+    <!-- First-time password set panel -->
+    <div id="set-pw-panel">
+      <h3>⚠ First login — please set your password</h3>
+      <div class="form-group">
+        <label>New Password (min 8 chars)</label>
+        <input type="password" id="new-pw" placeholder="New password">
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" id="confirm-pw" placeholder="Confirm password">
+      </div>
+      <button class="btn btn-warn login-btn" onclick="setPassword()">Set Password & Continue</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+  let pendingUserLoginID = null;
+
+  // If already logged in, go to dashboard
+  if (getToken()) window.location.href = 'dashboard.html';
+
+  // Allow Enter key to submit
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      if (document.getElementById('set-pw-panel').style.display === 'block') setPassword();
+      else login();
+    }
+  });
+
+  function showErr(msg) {
+    const el = document.getElementById('login-err');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    document.getElementById('login-err').style.display = 'none';
+
+    if (!username || !password) return showErr('Please enter username and password');
+
+    try {
+      const data = await api.post('/auth/login', { username, password });
+      saveAuth(data.token, data.user);
+      window.location.href = 'dashboard.html';
+    } catch (err) {
+      // First-time login — must set password
+      if (err.status === 403 && err.message?.includes('Password not set')) {
+        // Fetch the userLoginID from the response — need raw fetch here
+        const res = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password: 'CHANGEME_TRIGGER' })
+        });
+        // Try another way — call set-password endpoint after getting ID
+        // The server returns userLoginID in the 403 body
+        const raw = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const body = await raw.json();
+        if (body.mustSetPassword && body.userLoginID) {
+          pendingUserLoginID = body.userLoginID;
+          document.getElementById('set-pw-panel').style.display = 'block';
+          showErr('Your account password has not been set yet. Please set it below.');
+        } else {
+          showErr(err.message || 'Login failed');
+        }
+      } else {
+        showErr(err.message || 'Invalid username or password');
+      }
+    }
+  }
+
+  async function setPassword() {
+    const newPw     = document.getElementById('new-pw').value;
+    const confirmPw = document.getElementById('confirm-pw').value;
+
+    if (newPw.length < 8) return showErr('Password must be at least 8 characters');
+    if (newPw !== confirmPw) return showErr('Passwords do not match');
+
+    try {
+      await api.post('/auth/set-password', { userLoginID: pendingUserLoginID, newPassword: newPw });
+      toast('Password set! Logging you in…');
+      document.getElementById('password').value = newPw;
+      setTimeout(login, 800);
+    } catch (err) {
+      showErr(err.message || 'Failed to set password');
+    }
+  }
+</script>
+</body>
+</html>
