@@ -90,18 +90,7 @@ mysql -u root -p < sql/DispensaryManagement.sql
 
 This creates the `DispensaryManagement` database with all 20 tables, constraints, indexes, and triggers.
 
-
-### 2.2 — Set up authentication tables
-
-```bash
-mysql -u root -p DispensaryManagement < sql/auth_system.sql
-```
-
-This creates `UserLogin`, `SystemRole`, `UserRoleMapping`, and `SuperAdmin` tables, along with the triggers that auto-create login accounts when Members, Doctors, or Staff are inserted. It also runs the backfill to create login accounts for all existing records.
-
----
-
-### 2.3 — Insert base data
+### 2.2 — Insert base data
 
 ```bash
 mysql -u root -p DispensaryManagement < sql/Dispensary_Management_Insert.sql
@@ -113,6 +102,18 @@ This inserts the minimum working dataset:
 - 5 Staff Employees
 - 5 Medicines
 - 10 Appointments
+
+### 2.3 — Set up authentication tables
+
+```bash
+mysql -u root -p DispensaryManagement < sql/auth_system.sql
+```
+
+This creates `UserLogin`, `SystemRole`, `UserRoleMapping`, and `SuperAdmin` tables, along with the triggers that auto-create login accounts when Members, Doctors, or Staff are inserted. It also runs the backfill to create login accounts for all existing records.
+
+---
+
+
 
 ## Step 3 — (Optional) Load Large Seed Dataset
 
