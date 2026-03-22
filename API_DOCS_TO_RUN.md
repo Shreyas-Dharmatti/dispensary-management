@@ -154,7 +154,7 @@ echo "Staff token saved: ${STF_TOKEN:0:30}..."
 
 ---
 
-## Step 3 — Change Password (SuperAdmin & Admin only)
+## Step 3 — Change Password (example shown for SuperAdmin & Admin only)
 
 ```bash
 # ── SuperAdmin change password ────────────────────────────────────────────────
