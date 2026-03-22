@@ -72,7 +72,7 @@ Make sure the following are installed on your system before proceeding:
 ## Step 1 — Clone the Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/dispensary-management.git
+git clone https://github.com/Shreyas-Dharmatti/dispensary-management.git
 cd dispensary-management
 ```
 
