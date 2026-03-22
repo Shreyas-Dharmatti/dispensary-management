@@ -17,10 +17,6 @@
 > | Support Staff | 111 | EMP00035 | Set in Step 1 |
 > | Staff | 303 | EMP4272 | Set in Step 1 |
 
-> **Find Admin username:**
-> ```sql
-> SELECT Username FROM UserLogin WHERE UserLoginID = 82;
-> ```
 
 ---
 
@@ -34,7 +30,6 @@ BASE="http://localhost:3000/api"
 
 ## Step 1 — Set Passwords (Doctor, Faculty, Nurse, Pharmacist, Technician, Support Staff, Staff)
 
-> SuperAdmin (ID 30) and Admin (ID 82) already have passwords — skip to Step 2.
 
 ```bash
 # ── SuperAdmin (UserLoginID 30) ───────────────────────────────────────────────────
