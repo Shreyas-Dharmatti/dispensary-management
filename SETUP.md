@@ -53,7 +53,6 @@ dispensary-management/
 │
 |─ API_DOCS_TO_RUN.md                   ← curl command reference for all 9 roles
 |- benchamarking_report.md   - benchmark report for subtask 4 and 5
-|- README.md
 ```
 
 ---
