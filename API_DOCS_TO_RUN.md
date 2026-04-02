@@ -1,5 +1,5 @@
 # curl Command Reference — Dispensary Management System
-## All Roles: SuperAdmin · Admin · Doctor · Faculty · Nurse · Pharmacist · Staff · Support Staff · Technician
+## All Roles: SuperAdmin · Admin · Doctor · Faculty · Student · Nurse · Pharmacist · Staff · Support Staff · Technician
 
 **Base URL:** `http://localhost:3000/api`
 
@@ -7,16 +7,21 @@
 >
 > | Role | UserLoginID | Username | Starting Password |
 > |---|---|---|---|
-> | SuperAdmin | 30 | sd1@admin.college.edu | Set in Step 1 |
-> | Admin | 82 | EMP00006 | Set in Step 1 |
-> | Doctor | 57 | DOC125 | Set in Step 1 |
+> | SuperAdmin | 30 | SuperAdmin01 | Super@001 |
+> | Admin | 82 | check MySQL | Admin@1234 |
+> | Doctor | 57 | DOC124 | Set in Step 1 |
 > | Faculty | 5 | FAC001 | Set in Step 1 |
 > | Nurse | 23 | NUR001 | Set in Step 1 |
 > | Pharmacist | 24 | PHR001 | Set in Step 1 |
 > | Technician | 26 | TECH001 | Set in Step 1 |
 > | Support Staff | 111 | EMP00035 | Set in Step 1 |
 > | Staff | 303 | EMP4272 | Set in Step 1 |
+> | Student | 1 | CS2021001 | Set in Step 1 |
 
+> **Find Admin username:**
+> ```sql
+> SELECT Username FROM UserLogin WHERE UserLoginID = 82;
+> ```
 
 ---
 
@@ -30,18 +35,9 @@ BASE="http://localhost:3000/api"
 
 ## Step 1 — Set Passwords (Doctor, Faculty, Nurse, Pharmacist, Technician, Support Staff, Staff)
 
+> SuperAdmin (ID 30) and Admin (ID 82) already have passwords — skip to Step 2.
 
 ```bash
-# ── SuperAdmin (UserLoginID 30) ───────────────────────────────────────────────────
-curl -s -X POST $BASE/auth/set-password \
-  -H "Content-Type: application/json" \
-  -d '{"userLoginID": 30, "newPassword": "Super@1234"}'
-
-# ── Admin (UserLoginID 82) ───────────────────────────────────────────────────
-curl -s -X POST $BASE/auth/set-password \
-  -H "Content-Type: application/json" \
-  -d '{"userLoginID": 82, "newPassword": "Admin@1234"}'
-
 # ── Doctor (UserLoginID 57) ───────────────────────────────────────────────────
 curl -s -X POST $BASE/auth/set-password \
   -H "Content-Type: application/json" \
@@ -76,6 +72,11 @@ curl -s -X POST $BASE/auth/set-password \
 curl -s -X POST $BASE/auth/set-password \
   -H "Content-Type: application/json" \
   -d '{"userLoginID": 303, "newPassword": "Staff@1234"}'
+
+# ── Student (UserLoginID 1) ───────────────────────────────────────────────────
+curl -s -X POST $BASE/auth/set-password \
+  -H "Content-Type: application/json" \
+  -d '{"userLoginID": 1, "newPassword": "Student@1234"}'
 ```
 
 ---
@@ -86,21 +87,21 @@ curl -s -X POST $BASE/auth/set-password \
 # ── SuperAdmin (UserLoginID 30) ───────────────────────────────────────────────
 SUPER_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "sd1@admin.college.edu", "password": "Super@1234"}' \
+  -d '{"username": "SuperAdmin01", "password": "Super@001"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "SuperAdmin token saved: ${SUPER_TOKEN:0:30}..."
 
 # ── Admin (UserLoginID 82) ────────────────────────────────────────────────────
 ADMIN_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "EMP00006", "password": "Admin@1234"}' \
+  -d '{"username": "ADMIN_USERNAME_HERE", "password": "Admin@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Admin token saved: ${ADMIN_TOKEN:0:30}..."
 
 # ── Doctor (UserLoginID 57) ───────────────────────────────────────────────────
 DOC_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "DOC125", "password": "Doctor@1234"}' \
+  -d '{"username": "DOC124", "password": "Doctor@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Doctor token saved: ${DOC_TOKEN:0:30}..."
 
@@ -145,18 +146,25 @@ STF_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -d '{"username": "EMP4272", "password": "Staff@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Staff token saved: ${STF_TOKEN:0:30}..."
+
+# ── Student (UserLoginID 1) ───────────────────────────────────────────────────
+STU_TOKEN=$(curl -s -X POST $BASE/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "CS2021001", "password": "Student@1234"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+echo "Student token saved: ${STU_TOKEN:0:30}..."
 ```
 
 ---
 
-## Step 3 — Change Password (example shown for SuperAdmin & Admin only)
+## Step 3 — Change Password (SuperAdmin & Admin only)
 
 ```bash
 # ── SuperAdmin change password ────────────────────────────────────────────────
 curl -s -X POST $BASE/auth/change-password \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $SUPER_TOKEN" \
-  -d '{"currentPassword": "Super@1234", "newPassword": "NewSuper@5678"}'
+  -d '{"currentPassword": "Super@001", "newPassword": "NewSuper@5678"}'
 
 # ── Admin change password ─────────────────────────────────────────────────────
 curl -s -X POST $BASE/auth/change-password \
@@ -164,6 +172,7 @@ curl -s -X POST $BASE/auth/change-password \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -d '{"currentPassword": "Admin@1234", "newPassword": "NewAdmin@5678"}'
 ```
+
 > After changing password, re-run the login commands in Step 2 with the new password to refresh tokens.
 
 ---
@@ -171,7 +180,7 @@ curl -s -X POST $BASE/auth/change-password \
 
 # SUPERADMIN (ID 30, Username: SuperAdmin01)
 
->  Full unrestricted access. The only role that can permanently delete Members, Doctors, Prescriptions, Visits, and Bills.
+> **Full unrestricted access. The only role that can permanently delete Members, Doctors, Prescriptions, Visits, and Bills.**
 
 ---
 
@@ -1413,6 +1422,138 @@ curl -s -X DELETE $BASE/prescriptions/1 \
 
 ---
 ---
+
+---
+---
+
+# STUDENT (ID 1, Username: CS2021001)
+
+> **Can:** Own profile only, book/cancel own appointments, view own prescriptions and portfolio. Doctors shown without contact details.
+> **Cannot:** Other members' data, clinical records, inventory, visits, billing, staff.
+
+---
+
+## What Student CAN do
+
+```bash
+# ── View own profile only (API returns only their record) ─────────────────────
+curl -s $BASE/members \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── View own member record by ID ──────────────────────────────────────────────
+curl -s $BASE/members/1 \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── View doctors (Name and Specialization only — phone/email stripped) ────────
+curl -s $BASE/doctors \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── View all medicines ────────────────────────────────────────────────────────
+curl -s $BASE/medicines \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── Check available appointment slots ────────────────────────────────────────
+curl -s "$BASE/appointments/slots?doctorID=1&date=2030-05-12" \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── Book own appointment ──────────────────────────────────────────────────────
+curl -s -X POST $BASE/appointments \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $STU_TOKEN" \
+  -d '{
+    "MemberID": 1,
+    "DoctorID": 1,
+    "AppointmentDate": "2030-05-12",
+    "AppointmentTime": "10:00:00",
+    "Symptoms": "Headache and fever",
+    "Priority": "Normal"
+  }' | python3 -m json.tool
+
+# ── View own appointments ─────────────────────────────────────────────────────
+curl -s $BASE/appointments \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── Cancel own appointment ────────────────────────────────────────────────────
+curl -s -X PUT $BASE/appointments/11 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $STU_TOKEN" \
+  -d '{"Status": "Cancelled"}' | python3 -m json.tool
+
+# ── View own prescriptions ────────────────────────────────────────────────────
+curl -s $BASE/prescriptions \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── View own prescription detail with medicines ───────────────────────────────
+curl -s $BASE/prescriptions/1 \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── View own portfolio ────────────────────────────────────────────────────────
+curl -s $BASE/portfolio/1 \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── View own bills ────────────────────────────────────────────────────────────
+curl -s $BASE/billing \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+
+# ── Update own non-restricted fields (address, contact) ──────────────────────
+curl -s -X PUT $BASE/members/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $STU_TOKEN" \
+  -d '{"Address": "Bangalore", "ContactNumber": "9876500001"}' | python3 -m json.tool
+```
+
+## What Student CANNOT do
+
+```bash
+# ── BLOCKED: View another member's profile ────────────────────────────────────
+curl -s $BASE/members/2 \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+# Response: {"error":"Access denied"}
+
+# ── BLOCKED: View another member's portfolio ──────────────────────────────────
+curl -s $BASE/portfolio/2 \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+# Response: {"error":"Access denied"}
+
+# ── BLOCKED: Book appointment for another member ──────────────────────────────
+curl -s -X POST $BASE/appointments \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $STU_TOKEN" \
+  -d '{"MemberID": 2, "DoctorID": 1, "AppointmentDate": "2030-05-12", "AppointmentTime": "11:00:00", "Symptoms": "Test", "Priority": "Normal"}' \
+  | python3 -m json.tool
+# Response: {"error":"You can only book appointments for yourself"}
+
+# ── BLOCKED: Change own Status or MemberType ──────────────────────────────────
+curl -s -X PUT $BASE/members/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $STU_TOKEN" \
+  -d '{"Status": "Inactive", "MemberType": "Faculty"}' | python3 -m json.tool
+# Response: {"error":"Access denied"} or field silently ignored
+
+# ── BLOCKED: View inventory ───────────────────────────────────────────────────
+curl -s $BASE/inventory \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+# Response: {"error":"Access denied"}
+
+# ── BLOCKED: View visits ──────────────────────────────────────────────────────
+curl -s $BASE/visits \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+# Response: {"error":"Access denied"}
+
+# ── BLOCKED: View staff list ──────────────────────────────────────────────────
+curl -s $BASE/staff \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+# Response: {"error":"Access denied"}
+
+# ── BLOCKED: Delete own appointment (can only cancel, not delete) ─────────────
+curl -s -X DELETE $BASE/appointments/11 \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -m json.tool
+# Response: {"error":"Access denied"}
+
+# ── CONFIRMED: GET /members only returns own record (not all 260) ─────────────
+curl -s $BASE/members \
+  -H "Authorization: Bearer $STU_TOKEN" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Count:', d['count'], '— should be 1')"
+```
 
 ## Quick Access Summary
 
