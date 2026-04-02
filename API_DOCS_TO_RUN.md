@@ -350,7 +350,7 @@ curl -s $BASE/suppliers \
 ---
 ---
 
-# ADMIN (ID 82, Username: check MySQL)
+# ADMIN (ID 82, Username: EMP00006)
 
 > **Can:** Create/Read/Update everything. Delete appointments, inventory, medicines, suppliers.
 > **Cannot:** Delete Members, Doctors, Prescriptions, Visits, Bills — those are SuperAdmin only.
@@ -550,7 +550,7 @@ curl -s -X DELETE $BASE/billing/1 \
 ---
 ---
 
-# DOCTOR (ID 57, Username: DOC124)
+# DOCTOR (ID 57, Username: DOC125)
 
 > **Can:** Own appointments only, create visits and prescriptions for own patients, view own patient portfolios, update own schedule.
 > **Cannot:** Other doctors' appointments, non-patient portfolios, inventory, billing, staff.
