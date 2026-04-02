@@ -7,9 +7,9 @@
 >
 > | Role | UserLoginID | Username | Starting Password |
 > |---|---|---|---|
-> | SuperAdmin | 30 | SuperAdmin01 | Super@001 |
-> | Admin | 82 | check MySQL | Admin@1234 |
-> | Doctor | 57 | DOC124 | Set in Step 1 |
+> | SuperAdmin | 30 | sd1@admin.college.edu | Set in Step 1 |
+> | Admin | 82 | EMP00006 | Set in Step 1 |
+> | Doctor | 57 | DOC125 | Set in Step 1 |
 > | Faculty | 5 | FAC001 | Set in Step 1 |
 > | Nurse | 23 | NUR001 | Set in Step 1 |
 > | Pharmacist | 24 | PHR001 | Set in Step 1 |
@@ -18,10 +18,6 @@
 > | Staff | 303 | EMP4272 | Set in Step 1 |
 > | Student | 1 | CS2021001 | Set in Step 1 |
 
-> **Find Admin username:**
-> ```sql
-> SELECT Username FROM UserLogin WHERE UserLoginID = 82;
-> ```
 
 ---
 
@@ -38,6 +34,16 @@ BASE="http://localhost:3000/api"
 > SuperAdmin (ID 30) and Admin (ID 82) already have passwords — skip to Step 2.
 
 ```bash
+# ── SuperAdmin (UserLoginID 30) ───────────────────────────────────────────────────
+curl -s -X POST $BASE/auth/set-password \
+  -H "Content-Type: application/json" \
+  -d '{"userLoginID": 30, "newPassword": "Super@1234"}'
+
+# ── Doctor (UserLoginID 82) ───────────────────────────────────────────────────
+curl -s -X POST $BASE/auth/set-password \
+  -H "Content-Type: application/json" \
+  -d '{"userLoginID": 82, "newPassword": "Admin@1234"}'
+
 # ── Doctor (UserLoginID 57) ───────────────────────────────────────────────────
 curl -s -X POST $BASE/auth/set-password \
   -H "Content-Type: application/json" \
@@ -87,21 +93,21 @@ curl -s -X POST $BASE/auth/set-password \
 # ── SuperAdmin (UserLoginID 30) ───────────────────────────────────────────────
 SUPER_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "SuperAdmin01", "password": "Super@001"}' \
+  -d '{"username": "sd1@admin.college.edu", "password": "Super@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "SuperAdmin token saved: ${SUPER_TOKEN:0:30}..."
 
 # ── Admin (UserLoginID 82) ────────────────────────────────────────────────────
 ADMIN_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "ADMIN_USERNAME_HERE", "password": "Admin@1234"}' \
+  -d '{"username": "EMP00006", "password": "Admin@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Admin token saved: ${ADMIN_TOKEN:0:30}..."
 
 # ── Doctor (UserLoginID 57) ───────────────────────────────────────────────────
 DOC_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "DOC124", "password": "Doctor@1234"}' \
+  -d '{"username": "DOC125", "password": "Doctor@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Doctor token saved: ${DOC_TOKEN:0:30}..."
 
@@ -157,7 +163,7 @@ echo "Student token saved: ${STU_TOKEN:0:30}..."
 
 ---
 
-## Step 3 — Change Password (SuperAdmin & Admin only)
+## Step 3 — Change Password (Shown only for SuperAdmin & Admin only)
 
 ```bash
 # ── SuperAdmin change password ────────────────────────────────────────────────
