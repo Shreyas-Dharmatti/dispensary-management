@@ -7,9 +7,9 @@
 >
 > | Role | UserLoginID | Username | Starting Password |
 > |---|---|---|---|
-> | SuperAdmin | 30 | SuperAdmin01 | Set in Step 1 |
+> | SuperAdmin | 30 | sd1@admin.college.edu | Set in Step 1 |
 > | Admin | 82 | EMP00006 | Set in Step 1 |
-> | Doctor | 57 | DOC124 | Set in Step 1 |
+> | Doctor | 57 | DOC125 | Set in Step 1 |
 > | Faculty | 5 | FAC001 | Set in Step 1 |
 > | Nurse | 23 | NUR001 | Set in Step 1 |
 > | Pharmacist | 24 | PHR001 | Set in Step 1 |
@@ -86,21 +86,21 @@ curl -s -X POST $BASE/auth/set-password \
 # ── SuperAdmin (UserLoginID 30) ───────────────────────────────────────────────
 SUPER_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "SuperAdmin01", "password": "Super@001"}' \
+  -d '{"username": "sd1@admin.college.edu", "password": "Super@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "SuperAdmin token saved: ${SUPER_TOKEN:0:30}..."
 
 # ── Admin (UserLoginID 82) ────────────────────────────────────────────────────
 ADMIN_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "ADMIN_USERNAME_HERE", "password": "Admin@1234"}' \
+  -d '{"username": "EMP00006", "password": "Admin@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Admin token saved: ${ADMIN_TOKEN:0:30}..."
 
 # ── Doctor (UserLoginID 57) ───────────────────────────────────────────────────
 DOC_TOKEN=$(curl -s -X POST $BASE/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "DOC124", "password": "Doctor@1234"}' \
+  -d '{"username": "DOC125", "password": "Doctor@1234"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 echo "Doctor token saved: ${DOC_TOKEN:0:30}..."
 
